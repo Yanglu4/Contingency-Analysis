@@ -1,0 +1,74 @@
+---
+title: "Contingency Analysis"
+author: "Yang"
+date: "April 2, 2019"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+#Load Dataset
+```{r AIDS}
+Y <- c(76,160,6,25,114,181,11,48)
+G <- factor(c("M","M","M","M","F","F","F","F"),levels=c("M","F"))
+I <- factor(c("Yes","Yes","No","No","Yes","Yes","No","No"),levels=c("Yes","No"))
+H <- factor(c("Yes","No","Yes","No","Yes","No","Yes","No"),levels=c("Yes","No"))
+
+GSS <- data.frame(cbind(Y,G,I,H))
+# Create a contingency table for a better view
+Tab <- xtabs(Y~G+I+H)
+
+m_full <- glm(Y~G*I*H,family=poisson)
+summary(m_full)
+
+```
+
+#Model Selection Through Backward Elimination
+```{r model selection}
+m2<-update(m_full,~.-G:I:H)
+anova(m2,m_full,test="Chi")
+```
+
+```{r}
+summary(m2)
+m3<-update(m2,~.-G:H) 
+anova(m3,m2,test="Chi")
+```
+
+```{r}
+summary(m3)
+m4<-update(m3,~.-G:I)
+anova(m4,m2,test="Chi")
+```
+
+```{r}
+summary(m4)
+```
+
+```{r}
+anova(m_full,m2,m3,m4,test = "Chi")
+m_full$deviance
+m2$deviance
+m3$deviance
+m4$deviance
+```
+Model 4 Y ~ G + I + H +I:H is selected as a adequate simplification of full model through backward elimination. And the for the interaction term(I:H),if any of I or H is given, it is conditionally independent of the rest.\newline
+
+
+#Confidence Interval
+```{r}
+#95% CI
+m_b <- glm(Y~H*I+I*G,family=poisson)
+coefs =summary(m_b)$coef
+exp(confint(m_b)["HNo:INo",])
+```
+```{r}
+#odds ratio
+e<-exp(1)
+e^(coefs[5,1])
+```
+
+#Interpretation
+The odds ratio is $e^{0.8723877}=2.392646$, meaning the odds ratio of people thinking that the government pay all of the health care costs of AIDS patients and there should be a government information program to promote safe sex practices and the odds of people who disagree with the above is 2.392646. And it does not change as the gender changes since it is independent of gender.
